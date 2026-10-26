@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Kết quả – {{ sess.course.code }} buổi {{ sess.number }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('lecturer.course', course_id=sess.course_id) }}" class="small">&larr; {{ sess.course.code }}</a>
+<h1 class="h4 my-2">{{ sess.course.code }} – {{ sess.course.name }} · Buổi {{ sess.number }}</h1>
+<p class="mb-1">Ngày {{ sess.date|vndate }} · <span class="badge status-{{ sess.status }}">{{ sess.status_label }}</span></p>
+{% set present_count = rows|selectattr(1)|list|length %}
+<p>Có mặt: <strong>{{ present_count }}</strong> · Vắng: <strong>{{ rows|length - present_count }}</strong></p>
+
+{% if verify %}
+<div class="alert {{ 'alert-success' if verify.ok else 'alert-danger' }}">
+  <div class="fw-semibold">{{ verify.message }}</div>
+  {% if verify.detail %}<div class="small">{{ verify.detail }}</div>{% endif %}
+</div>
+{% endif %}
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  {% if sess.status == 'closed' %}
+  <form method="post" action="{{ url_for('lecturer.finalize_session', session_id=sess.id) }}" class="m-0" data-confirm="Chốt và ký số kết quả buổi này?">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button class="btn btn-primary" type="submit">Chốt buổi</button>
+  </form>
+  {% endif %}
+  {% if sess.status in ('closed', 'finalized') %}
+  <a class="btn btn-outline-primary" href="{{ url_for('lecturer.verify', session_id=sess.id) }}">Kiểm tra toàn vẹn</a>
+  {% endif %}
+</div>
+{% if signature %}
+<p class="small text-muted">Chữ ký mới nhất lúc {{ signature.signed_at|dt }} ({{ sess.signatures|length }} lần ký) · hash cuối <code>{{ signature.final_hash[:16] }}…</code></p>
+{% endif %}
+
+<div class="table-responsive">
+<table class="table align-middle bg-white">
+  <thead><tr><th>MSSV</th><th>Họ tên</th><th>Trạng thái</th><th>Ghi nhận lúc</th><th class="text-end">Sửa tay</th></tr></thead>
+  <tbody>
+  {% for student, present, ev in rows %}
+    <tr>
+      <td>{{ student.student_code }}</td>
+      <td>{{ student.full_name }}</td>
+      <td>{% if present %}<span class="badge bg-success">Có mặt</span>{% else %}<span class="badge bg-danger">Vắng</span>{% endif %}</td>
+      <td class="small text-muted">{% if ev %}{{ ev.created_at|dt }}{% if ev.kind != 'scan' %} (sửa tay){% endif %}{% endif %}</td>
+      <td class="text-end">
+        <form method="post" action="{{ url_for('lecturer.mark', session_id=sess.id) }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="student_id" value="{{ student.id }}">
+          {% if present %}
+          <button class="btn btn-sm btn-outline-danger" name="state" value="absent" type="submit">Đánh vắng</button>
+          {% else %}
+          <button class="btn btn-sm btn-outline-success" name="state" value="present" type="submit">Đánh có mặt</button>
+          {% endif %}
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

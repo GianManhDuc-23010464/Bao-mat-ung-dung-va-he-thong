@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-sm-8 col-md-5 col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-3">Đăng nhập</h1>
+        {% if note %}<div class="alert alert-warning">{{ note }}</div>{% endif %}
+        {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+        <form method="post" novalidate>
+          {{ form.csrf_token }}
+          <div class="mb-3">
+            {{ form.username.label(class="form-label") }}
+            {{ form.username(class="form-control form-control-lg", autocomplete="username", autocapitalize="none") }}
+          </div>
+          <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control form-control-lg", autocomplete="current-password") }}
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100">Đăng nhập</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

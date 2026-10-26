@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% from "_state.html" import state_badge %}
+{% block title %}Bảng điểm danh – {{ course.code }}{% endblock %}
+{% block container_class %}container-fluid py-4{% endblock %}
+{% block content %}
+<a href="{{ url_for('lecturer.course', course_id=course.id) }}" class="small">&larr; {{ course.code }}</a>
+<h1 class="h4 my-2">Bảng điểm danh – {{ course.code }} – {{ course.name }}</h1>
+<div class="table-responsive">
+<table class="table table-bordered table-sm align-middle bg-white sheet">
+  <thead class="table-light">
+    <tr>
+      <th>MSSV</th><th>Họ tên</th>
+      {% for s in course.sessions %}
+      <th class="text-center">
+        <div>Buổi {{ s.number }}</div>
+        <div class="small text-muted fw-normal">{{ s.date|vndate }}</div>
+        {% if s.status == 'finalized' %}
+        <a class="btn btn-sm btn-outline-primary mt-1 py-0" href="{{ url_for('lecturer.verify', session_id=s.id) }}">Kiểm tra toàn vẹn</a>
+        {% elif s.status in ('open', 'closed') %}
+        <a class="small" href="{{ url_for('lecturer.session_detail', session_id=s.id) }}">{{ s.status_label }}</a>
+        {% endif %}
+      </th>
+      {% endfor %}
+      <th class="text-center">Tổng vắng</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for student, cells, absent in rows %}
+    <tr>
+      <td>{{ student.student_code }}</td>
+      <td class="text-nowrap">{{ student.full_name }}</td>
+      {% for state in cells %}<td class="text-center">{{ state_badge(state) }}</td>{% endfor %}
+      <td class="text-center fw-bold">{{ absent }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

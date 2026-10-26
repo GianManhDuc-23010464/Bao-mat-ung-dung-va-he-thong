@@ -1,0 +1,10 @@
+body { min-height: 100vh; }
+.qr-box img, .qr-box canvas { display: block; max-width: 100%; height: auto; }
+.badge.status-scheduled { background: #6c757d; }
+.badge.status-open { background: #198754; }
+.badge.status-closed { background: #fd7e14; }
+.badge.status-finalized { background: #0d6efd; }
+.checkin-result.ok { background: #198754; }
+.checkin-result.fail { background: #dc3545; }
+.checkin-mark { font-size: 1.1rem; letter-spacing: .12em; font-weight: 700; opacity: .9; }
+.checkin-message { font-size: 1.75rem; font-weight: 600; line-height: 1.3; }

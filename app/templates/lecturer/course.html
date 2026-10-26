@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ course.code }} – {{ course.name }}{% endblock %}
+{% block content %}
+<a href="{{ url_for('lecturer.index') }}" class="small">&larr; Các lớp</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 my-2">
+  <h1 class="h4 m-0">{{ course.code }} – {{ course.name }}</h1>
+  <a class="btn btn-outline-primary" href="{{ url_for('lecturer.sheet', course_id=course.id) }}">Bảng điểm danh</a>
+</div>
+<p class="text-muted">Sĩ số: {{ course.enrollments|length }}</p>
+<div class="table-responsive">
+<table class="table table-hover align-middle bg-white">
+  <thead><tr><th>Buổi</th><th>Ngày</th><th>Trạng thái</th><th class="text-end">Thao tác</th></tr></thead>
+  <tbody>
+  {% for s in course.sessions %}
+    <tr>
+      <td>Buổi {{ s.number }}</td>
+      <td>{{ s.date|vndate }}</td>
+      <td><span class="badge status-{{ s.status }}">{{ s.status_label }}</span></td>
+      <td class="text-end">
+        {% if s.status == 'scheduled' %}
+          <form method="post" action="{{ url_for('lecturer.open_session', session_id=s.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-primary" type="submit">Tạo buổi điểm danh</button>
+          </form>
+        {% elif s.status == 'open' %}
+          <a class="btn btn-sm btn-success" href="{{ url_for('lecturer.present', session_id=s.id) }}">Mở màn hình chiếu</a>
+        {% else %}
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('lecturer.session_detail', session_id=s.id) }}">Xem kết quả</a>
+        {% endif %}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

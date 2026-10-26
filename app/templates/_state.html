@@ -1,0 +1,7 @@
+{% macro state_badge(state) -%}
+{%- if state == 'present' -%}<span class="badge bg-success">Có mặt</span>
+{%- elif state == 'absent' -%}<span class="badge bg-danger">Vắng</span>
+{%- elif state == 'pending' -%}<span class="badge bg-warning text-dark">Đang mở</span>
+{%- else -%}<span class="text-muted small">Chưa diễn ra</span>
+{%- endif -%}
+{%- endmacro %}

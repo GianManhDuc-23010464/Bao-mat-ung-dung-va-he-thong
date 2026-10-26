@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Kết quả điểm danh{% endblock %}
+{% block content %}
+<div class="checkin-result {{ 'ok' if ok else 'fail' }} rounded-4 p-4 p-md-5 text-center text-white shadow">
+  <div class="checkin-mark mb-3">{{ 'ĐÃ GHI NHẬN' if ok else 'KHÔNG THÀNH CÔNG' }}</div>
+  <p class="checkin-message mb-3">{{ message }}</p>
+  {% if course %}<p class="fs-5 mb-0">{{ course.code }} – {{ course.name }}</p>{% endif %}
+</div>
+{% if current_user.is_student %}
+<div class="text-center mt-4">
+  <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('student.me') }}">Tình trạng điểm danh của tôi</a>
+</div>
+{% endif %}
+{% endblock %}

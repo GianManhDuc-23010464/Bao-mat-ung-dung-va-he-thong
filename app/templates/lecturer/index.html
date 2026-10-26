@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Các lớp tôi dạy{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Các lớp tôi dạy</h1>
+<div class="row g-3">
+  {% for c in courses %}
+  <div class="col-12 col-md-6 col-lg-4">
+    <a class="card h-100 text-decoration-none text-body shadow-sm" href="{{ url_for('lecturer.course', course_id=c.id) }}">
+      <div class="card-body">
+        <div class="text-muted small">{{ c.code }}</div>
+        <h2 class="h5">{{ c.name }}</h2>
+        <div class="small">Sĩ số: {{ c.enrollments|length }}</div>
+        <div class="small">Số buổi đã chốt: {{ c.sessions|selectattr('status', 'equalto', 'finalized')|list|length }} / {{ c.sessions|length }}</div>
+      </div>
+    </a>
+  </div>
+  {% else %}
+  <p class="text-muted">Chưa có lớp nào.</p>
+  {% endfor %}
+</div>
+{% endblock %}

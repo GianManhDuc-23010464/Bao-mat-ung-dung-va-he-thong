@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_state.html" import state_badge %}
+{% block title %}Tình trạng điểm danh của tôi{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Tình trạng điểm danh của tôi</h1>
+{% for course, rows, absent in tables %}
+<div class="card shadow-sm mb-4">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center">
+    <div><span class="text-muted small">{{ course.code }}</span><div class="fw-semibold">{{ course.name }}</div></div>
+    <div class="text-end">Tổng vắng: <strong class="{{ 'text-danger' if absent else '' }}">{{ absent }}</strong></div>
+  </div>
+  <div class="table-responsive">
+  <table class="table table-sm mb-0 align-middle">
+    <thead><tr><th>Buổi</th><th>Ngày</th><th>Trạng thái</th></tr></thead>
+    <tbody>
+    {% for s, state in rows %}
+      <tr><td>Buổi {{ s.number }}</td><td>{{ s.date|vndate }}</td><td>{{ state_badge(state) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% else %}
+<p class="text-muted">Bạn chưa đăng ký học phần nào.</p>
+{% endfor %}
+{% endblock %}
