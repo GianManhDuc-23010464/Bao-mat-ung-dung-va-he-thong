@@ -6,7 +6,7 @@ CSP = "; ".join([
     "default-src 'self'",
     "script-src 'self' https://cdn.jsdelivr.net",
     "style-src 'self' https://cdn.jsdelivr.net",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob:",
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",

@@ -1,6 +1,6 @@
 from app.models import ClassSession, Course, User
 from app.seed import seed_data
-from helpers import login
+from helpers import login, logout
 
 
 def test_sheet(app, client):
@@ -42,3 +42,16 @@ def test_cell_states(app):
     seed_data()
     sess = ClassSession.query.filter_by(status="scheduled").first()
     assert sess.cell_state(1) == "scheduled"
+
+
+def test_scan_page_student_only(app, client):
+    seed_data()
+    login(client, "sv01")
+    page = client.get("/me").get_data(as_text=True)
+    assert "/scan" in page
+    resp = client.get("/scan")
+    assert resp.status_code == 200
+    assert "scan.js" in resp.get_data(as_text=True)
+    logout(client)
+    login(client, "gv01")
+    assert client.get("/scan").status_code == 403

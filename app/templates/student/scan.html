@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Quét mã QR{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3 text-center">Quét mã QR trên máy chiếu</h1>
+
+<div class="scan-box mb-3 d-none" id="scan-box">
+  <video id="scan-video" playsinline muted></video>
+</div>
+<canvas id="scan-canvas" class="d-none"></canvas>
+
+<p id="scan-status" class="text-center fs-5 mb-3" role="status">Bấm nút bên dưới để bật camera.</p>
+
+<div class="d-grid gap-2 mx-auto scan-actions">
+  <button type="button" class="btn btn-primary btn-lg" id="scan-start">Bật camera để quét</button>
+  <button type="button" class="btn btn-outline-secondary btn-lg d-none" id="scan-stop">Tắt camera</button>
+  <label class="btn btn-outline-primary btn-lg d-none" id="scan-photo-label">
+    Chụp ảnh mã QR
+    <input type="file" accept="image/*" capture="environment" id="scan-photo" class="d-none">
+  </label>
+  <a class="btn btn-link" href="{{ url_for('student.me') }}">Tình trạng điểm danh của tôi</a>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="{{ url_for('static', filename='scan.js') }}"></script>
+{% endblock %}
