@@ -1,119 +1,229 @@
 # Điểm danh QR chống gian lận
 
-Ứng dụng web điểm danh bằng mã QR đổi mỗi 5 giây. Dự án môn Bảo mật ứng dụng và hệ thống.
+Ứng dụng web điểm danh bằng mã QR đổi mỗi 5 giây. Dự án môn **Bảo mật ứng dụng và hệ thống**.
 
-## 1. Giới thiệu và chức năng
+Giảng viên chiếu mã QR lên màn hình. Sinh viên đăng nhập sẵn trên điện thoại, quét mã là được ghi nhận ngay. Mã chỉ có hiệu lực trong 5 giây nên không thể chụp gửi cho người vắng mặt. Kết quả mỗi buổi được nối thành chuỗi băm và ký số, nên mọi chỉnh sửa trực tiếp trong cơ sở dữ liệu đều bị phát hiện.
+
+## Mục lục
+
+1. [Chức năng](#1-chức-năng)
+2. [Cơ chế bảo mật](#2-cơ-chế-bảo-mật)
+3. [Công nghệ và cấu trúc thư mục](#3-công-nghệ-và-cấu-trúc-thư-mục)
+4. [Cài đặt](#4-cài-đặt)
+5. [Tạo dữ liệu mẫu](#5-tạo-dữ-liệu-mẫu)
+6. [Chạy ứng dụng](#6-chạy-ứng-dụng)
+7. [Tài khoản thử](#7-tài-khoản-thử)
+8. [Cách demo](#8-cách-demo)
+9. [Xử lý sự cố](#9-xử-lý-sự-cố)
+10. [Chạy test](#10-chạy-test)
+11. [Giới hạn của hệ thống](#11-giới-hạn-của-hệ-thống)
+
+## 1. Chức năng
 
 **Giảng viên**
-- Xem danh sách lớp mình dạy, danh sách 10 buổi của mỗi lớp.
-- Mở buổi điểm danh: màn hình chiếu hiện mã QR lớn, tự đổi mỗi 5 giây, kèm số sinh viên đã điểm danh / sĩ số và danh sách tên (mới nhất ở trên).
-- "Xác nhận & kết thúc": đóng buổi, mọi lượt quét sau đó bị từ chối.
-- Xem kết quả buổi, sửa tay có mặt / vắng từng sinh viên, "Chốt buổi" để ký số kết quả.
-- Bảng điểm danh của lớp (sinh viên × 10 buổi, tổng số buổi vắng), nút "Kiểm tra toàn vẹn" cho từng buổi đã chốt.
+- Xem danh sách lớp mình dạy và 10 buổi của mỗi lớp.
+- **Tạo buổi điểm danh**: màn hình chiếu hiện mã QR lớn, tự đổi mỗi 5 giây, kèm số sinh viên đã điểm danh / sĩ số và danh sách tên (mới nhất ở trên), cập nhật mỗi giây.
+- **Xác nhận & kết thúc**: đóng buổi, mọi lượt quét sau đó bị từ chối.
+- Xem kết quả buổi, sửa tay có mặt / vắng từng sinh viên, **Chốt buổi** để ký số kết quả.
+- Bảng điểm danh của lớp (sinh viên × 10 buổi, tổng số buổi vắng), nút **Kiểm tra toàn vẹn** cho từng buổi đã chốt.
 
 **Sinh viên**
 - Đăng nhập sẵn trên điện thoại (giữ đăng nhập 30 ngày).
-- Quét QR bằng camera, link mở ra là được ghi nhận ngay.
-- Trang "Tình trạng điểm danh của tôi": mỗi môn một bảng, kèm tổng số buổi vắng.
+- Điểm danh bằng một trong hai cách:
+  - Quét QR bằng ứng dụng camera của điện thoại, mở link là được ghi nhận ngay.
+  - Bấm **Quét mã QR điểm danh** ngay trong web, đọc được mã là được ghi nhận ngay (cần chạy HTTPS, xem [mục 6](#6-chạy-ứng-dụng)).
+- Trang **Tình trạng điểm danh của tôi**: mỗi môn một bảng (có mặt / vắng / chưa diễn ra), kèm tổng số buổi vắng.
 
-**Cơ chế bảo mật chính**
-- Mã QR = HMAC-SHA256(khóa bí mật của buổi, khung thời gian 5 giây), chỉ chấp nhận mã của khung hiện tại. Khóa không bao giờ gửi xuống trình duyệt và bị xóa khi chốt buổi.
-- Bảng sự kiện điểm danh chỉ thêm, không sửa, không xóa; mỗi buổi có một chuỗi băm SHA-256 riêng.
-- Khi chốt buổi, hash cuối của chuỗi được ký bằng Ed25519 (khóa lưu ở thư mục `keys/`, ngoài CSDL). Sửa tay sau khi chốt sẽ nối thêm sự kiện và ký lại.
-- "Kiểm tra toàn vẹn" tính lại toàn bộ chuỗi và xác minh chữ ký, chỉ ra đúng sự kiện bị sửa hoặc xóa.
-- Mật khẩu băm bcrypt, CSRF token cho mọi form POST, phân quyền phía server, cookie `HttpOnly` + `SameSite=Lax`, Content-Security-Policy, giới hạn 10 lượt quét/phút mỗi tài khoản, mã QR được che trong log.
+## 2. Cơ chế bảo mật
 
-## 2. Cài đặt
+| Thành phần | Cách làm |
+|---|---|
+| Mã QR động | `HMAC-SHA256(khóa bí mật của buổi, khung 5 giây)`, lấy 10 ký tự đầu. Chỉ chấp nhận mã của khung hiện tại, so sánh bằng `hmac.compare_digest`. Khóa không bao giờ gửi xuống trình duyệt và bị xóa khi chốt buổi. |
+| Kiểm tra lượt quét | Theo thứ tự: đã đăng nhập → thuộc lớp → buổi đang mở → mã đúng khung hiện tại → chưa điểm danh. Giới hạn 10 lượt quét/phút mỗi tài khoản. |
+| Chuỗi băm | Bảng sự kiện điểm danh chỉ thêm, không sửa, không xóa. Mỗi sự kiện chứa hash của sự kiện trước (SHA-256), mỗi buổi một chuỗi riêng. |
+| Ký số | Khi chốt buổi, hash cuối được ký bằng Ed25519. Khóa riêng nằm trong `keys/`, ngoài CSDL. Sửa tay sau khi chốt thì nối thêm sự kiện và ký lại. |
+| Kiểm tra toàn vẹn | Tính lại toàn bộ chuỗi và xác minh chữ ký, chỉ ra đúng sự kiện bị sửa hoặc bị xóa. |
+| Web | Mật khẩu băm bcrypt; thông báo đăng nhập sai không lộ tài khoản có tồn tại hay không; CSRF token cho mọi form POST; phân quyền phía server cho mọi route; cookie `HttpOnly` + `SameSite=Lax` (thêm `Secure` khi chạy HTTPS); Content-Security-Policy; mã QR được che trong log. |
 
-Cần Python 3.11 trở lên.
+## 3. Công nghệ và cấu trúc thư mục
 
+Python, Flask, Flask-Login, Flask-WTF, Flask-SQLAlchemy, SQLite, `bcrypt`, `cryptography` (Ed25519, chứng chỉ HTTPS), Bootstrap 5, `qrcode.js` (vẽ QR), `jsQR` (quét QR trong web), `pytest`.
+
+```
+app/
+├── __init__.py      # create_app, đăng ký blueprint, lệnh `flask seed`
+├── config.py        # cấu hình, đọc .env
+├── models.py        # bảng CSDL
+├── auth.py          # đăng nhập / đăng xuất, phân quyền
+├── lecturer.py      # trang và API của giảng viên
+├── student.py       # /checkin, /scan, /me
+├── qr.py            # sinh và kiểm tra mã theo khung 5 giây
+├── integrity.py     # chuỗi băm, ký số, kiểm tra toàn vẹn
+├── security.py      # header bảo mật, che mã QR trong log
+├── tls.py           # chứng chỉ HTTPS tự ký, server HTTPS
+├── seed.py          # dữ liệu mẫu
+├── templates/
+└── static/
+tests/               # pytest
+run.py               # chạy server
+```
+
+Các thư mục sinh ra khi chạy (không đưa lên git): `instance/` (CSDL `app.db`), `keys/` (khóa ký số và chứng chỉ HTTPS), `.env`.
+
+## 4. Cài đặt
+
+Cần Python 3.10 trở lên. Mở Terminal (Windows: PowerShell) tại thư mục dự án.
+
+**Tạo môi trường ảo và cài thư viện:**
+
+macOS / Linux:
 ```bash
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS / Linux:
+python3 -m venv .venv
 source .venv/bin/activate
-
 pip install -r requirements.txt
 ```
 
-Copy `.env.example` thành `.env` rồi điền `SECRET_KEY` (một chuỗi ngẫu nhiên dài):
-
-```bash
-cp .env.example .env          # Windows: copy .env.example .env
-python -c "import secrets; print(secrets.token_hex(32))"   # dán kết quả vào SECRET_KEY=
+Windows:
+```powershell
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-`BASE_URL` để trống thì ứng dụng tự phát hiện IP mạng nội bộ của máy (ví dụ `http://192.168.1.5:5000`). Chỉ cần điền khi tự phát hiện sai, ví dụ máy có nhiều card mạng.
+**Tạo file `.env`** từ file mẫu (Windows dùng `copy` thay cho `cp`):
+```bash
+cp .env.example .env
+```
 
-`HTTPS=1` để chạy HTTPS (xem mục 4). Để trống = HTTP.
+Tạo một chuỗi ngẫu nhiên:
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
-## 3. Tạo dữ liệu mẫu
+Mở `.env` và điền:
+
+```
+SECRET_KEY=<dán chuỗi vừa tạo>
+BASE_URL=
+HTTPS=1
+```
+
+| Biến | Ý nghĩa |
+|---|---|
+| `SECRET_KEY` | Khóa ký cookie phiên. Bắt buộc điền, nếu để trống mọi người bị đăng xuất mỗi lần khởi động lại. |
+| `BASE_URL` | Địa chỉ dùng trong link QR. Để trống thì tự phát hiện IP mạng nội bộ của máy. Chỉ cần điền khi phát hiện sai (ví dụ máy có nhiều card mạng). |
+| `HTTPS` | `1` = chạy HTTPS bằng chứng chỉ tự ký, cần để quét QR ngay trong web trên điện thoại. Để trống = HTTP. |
+
+## 5. Tạo dữ liệu mẫu
 
 ```bash
 flask --app app seed
 ```
 
-Lệnh này xóa CSDL cũ (`instance/app.db`) và tạo lại từ đầu. Dùng để reset trước mỗi lần demo. Dữ liệu mẫu: 1 giảng viên, 20 sinh viên, 3 học phần (mỗi lớp 10 sinh viên). Mỗi học phần 10 buổi: buổi 1–4 đã chốt, có chữ ký; buổi 5–10 chưa diễn ra. Giảng viên có thể mở bất kỳ buổi nào chưa diễn ra.
+Lệnh này **xóa CSDL cũ** (`instance/app.db`) và tạo lại từ đầu, dùng để reset trước mỗi lần demo:
+- 1 giảng viên, 20 sinh viên, 3 học phần, mỗi lớp 10 sinh viên.
+- Mỗi học phần 10 buổi: buổi 1–4 đã chốt (có chữ ký), buổi 5–10 chưa diễn ra. Giảng viên có thể mở bất kỳ buổi nào chưa diễn ra.
 
-Lần chạy đầu tiên sẽ tự sinh cặp khóa Ed25519 vào `keys/`. Không xóa thư mục này sau khi đã có dữ liệu, nếu không các chữ ký cũ sẽ không xác minh được (khi đó chạy lại `seed`).
+Lần chạy đầu tiên tự sinh cặp khóa Ed25519 vào `keys/`. Đừng xóa thư mục này khi đã có dữ liệu, nếu không các chữ ký cũ sẽ không xác minh được (khi đó chạy lại `seed`).
 
-## 4. Chạy
+## 6. Chạy ứng dụng
 
 ```bash
 python run.py
 ```
 
-Máy chủ lắng nghe ở `0.0.0.0:5000`. Trên laptop mở `http://<IP-laptop>:5000` (IP in ra ở dòng `Running on http://...` khi khởi động).
+Khi khởi động, Terminal in ra hai địa chỉ, ví dụ:
 
-**Chạy HTTPS (để sinh viên quét QR ngay trong web):** trình duyệt điện thoại chỉ cho bật camera trên trang web khi trang chạy HTTPS. Đặt `HTTPS=1` trong `.env` rồi chạy lại `python run.py`:
+```
+ * Running on https://127.0.0.1:5000
+ * Running on https://192.168.0.105:5000
+```
 
-- Lần đầu ứng dụng tự sinh chứng chỉ tự ký vào `keys/tls_cert.pem` và `keys/tls_key.pem`, cấp cho IP mạng nội bộ hiện tại. Khi đổi mạng (IP khác) chứng chỉ được sinh lại.
-- Mở `https://<IP-laptop>:5000`. Vì chứng chỉ tự ký, mỗi máy (laptop, từng điện thoại) sẽ hiện cảnh báo bảo mật **một lần**: chọn "Nâng cao" → "Tiếp tục truy cập" (Safari: "Hiển thị chi tiết" → "truy cập trang web này").
-- Mã QR trên máy chiếu tự dùng link `https://...`. Cookie phiên có thêm cờ `Secure`, nên sau khi bật hoặc tắt HTTPS mọi người cần đăng nhập lại.
+**Laptop và điện thoại đều mở địa chỉ có IP mạng nội bộ** (`https://192.168.x.x:5000`). Địa chỉ `127.0.0.1` chỉ trỏ về chính thiết bị đang dùng, nên điện thoại không vào được bằng địa chỉ này. Mã QR trên máy chiếu cũng luôn dùng địa chỉ IP mạng nội bộ.
 
-## 5. Tài khoản thử
+Dừng server: bấm `Ctrl + C`.
+
+**Về HTTPS (`HTTPS=1`):**
+- Trình duyệt điện thoại chỉ cho bật camera trên trang web khi trang chạy HTTPS. Vì vậy chức năng **Quét mã QR điểm danh** trong web cần HTTPS. Cách quét bằng ứng dụng camera của điện thoại thì chạy được với cả HTTP.
+- Lần đầu chạy, ứng dụng tự sinh chứng chỉ tự ký vào `keys/tls_cert.pem` và `keys/tls_key.pem`. Khi đổi mạng (IP khác), chứng chỉ được sinh lại.
+- Vì chứng chỉ tự ký, mỗi máy sẽ hiện cảnh báo bảo mật **một lần**:
+  - Chrome: **Nâng cao** → **Tiếp tục truy cập 192.168.x.x (không an toàn)**.
+  - Safari (macOS, iPhone): **Hiển thị chi tiết** → **truy cập trang web này** → **Truy cập trang web**.
+- Sau khi bật hoặc tắt HTTPS, mọi người cần đăng nhập lại (cookie đổi cờ `Secure`).
+
+## 7. Tài khoản thử
 
 | Vai trò | Tên đăng nhập | Mật khẩu |
 |---|---|---|
-| Giảng viên | `gv01` | `Matkhau@123` |
+| Giảng viên | `gv01` (Nguyễn Văn An) | `Matkhau@123` |
 | Sinh viên | `sv01` … `sv20` | `Matkhau@123` |
 
-Lớp: `BMUD01` có sv01–sv10, `MMT01` có sv06–sv15, `CSDL01` có sv01–sv05 và sv16–sv20.
+| Học phần | Mã | Sinh viên |
+|---|---|---|
+| Bảo mật ứng dụng và hệ thống | `BMUD01` | sv01–sv10 |
+| Mạng máy tính | `MMT01` | sv06–sv15 |
+| Cơ sở dữ liệu | `CSDL01` | sv01–sv05, sv16–sv20 |
 
-## 6. Cách demo
+## 8. Cách demo
 
-1. Laptop: đăng nhập `gv01` → chọn lớp → bấm **"Tạo buổi điểm danh"** ở buổi 5 → màn hình chiếu QR (nên mở toàn màn hình, F11).
-2. Điện thoại kết nối **cùng Wi-Fi** với laptop, mở `http://<IP-laptop>:5000`, đăng nhập một sinh viên của lớp (ví dụ `sv01` cho BMUD01).
-3. Dùng camera điện thoại quét QR → trang hiện "Điểm danh thành công lúc ...". Cách khác: trên trang "Tình trạng điểm danh của tôi" bấm **"Quét mã QR điểm danh"** → **"Bật camera để quét"** để quét ngay trong web, đọc được mã là ghi nhận luôn. Camera trực tiếp cần chạy HTTPS (mục 4); với HTTP, trang chỉ cho chụp ảnh mã QR, dễ bị quá 5 giây. Trên máy chiếu, số lượng và danh sách cập nhật trong khoảng 1 giây.
-4. Thử các trường hợp bị từ chối: quét lại lần nữa, chụp ảnh QR rồi mở link sau hơn 5 giây, đăng nhập sinh viên lớp khác (ví dụ `sv11` cho BMUD01).
-5. Bấm **"Xác nhận & kết thúc"** → sửa tay nếu cần → **"Chốt buổi"** → **"Kiểm tra toàn vẹn"** → "Còn nguyên vẹn".
-6. Demo phát hiện sửa dữ liệu: mở `instance/app.db` bằng DB Browser for SQLite (hoặc `sqlite3`), sửa cột `kind` của một dòng trong `attendance_events`, hoặc xóa một dòng, rồi bấm lại "Kiểm tra toàn vẹn". Hệ thống báo dòng đỏ chỉ đúng sự kiện bị sửa.
+1. **Laptop**: mở `https://<IP-laptop>:5000`, đăng nhập `gv01` → chọn lớp `BMUD01` → bấm **Tạo buổi điểm danh** ở buổi 5. Màn hình chiếu QR hiện ra (nên bật toàn màn hình).
+2. **Điện thoại**: kết nối **cùng Wi-Fi** với laptop, mở cùng địa chỉ, đăng nhập `sv01`.
+3. **Quét QR**, chọn một trong hai cách:
+   - Trong web: bấm **Quét mã QR điểm danh** → **Bật camera để quét** → cho phép dùng camera → hướng vào mã QR.
+   - Bằng ứng dụng Camera của điện thoại: quét mã rồi bấm vào link hiện ra.
 
-## 7. Xử lý sự cố
+   Trang hiện **"Điểm danh thành công lúc HH:MM:SS"**. Trên máy chiếu, số lượng và danh sách cập nhật trong khoảng 1 giây.
+4. **Các trường hợp bị từ chối**:
+   - Quét lại lần nữa → "Bạn đã điểm danh buổi này lúc ...".
+   - Chụp ảnh QR, mở link sau hơn 5 giây → "Mã đã đổi".
+   - Đăng nhập sinh viên lớp khác (ví dụ `sv11`) → "Bạn không thuộc lớp này".
+5. Bấm **Xác nhận & kết thúc** → sửa tay nếu cần → **Chốt buổi** → **Kiểm tra toàn vẹn** → "Còn nguyên vẹn".
+6. **Phát hiện sửa dữ liệu**: mở `instance/app.db` bằng DB Browser for SQLite (hoặc `sqlite3`). Sửa cột `kind` của một dòng trong bảng `attendance_events`, hoặc xóa một dòng, rồi bấm lại **Kiểm tra toàn vẹn**. Hệ thống báo đỏ, chỉ ra đúng sự kiện bị sửa.
 
-- **Điện thoại không mở được link trong QR:**
-  - Kiểm tra điện thoại và laptop dùng **cùng một mạng Wi-Fi**.
-  - Windows: khi chạy lần đầu, cho phép Python qua **tường lửa Windows** (chọn cả mạng Private). Nếu đã lỡ chặn: Windows Defender Firewall → Allow an app → bật Python.
-  - Kiểm tra **cổng 5000** không bị chương trình khác chiếm, và trên điện thoại mở thử `http://<IP-laptop>:5000/login`.
-  - Kiểm tra link trong QR có đúng IP của laptop không; nếu sai, đặt `BASE_URL=http://<IP-đúng>:5000` trong `.env`.
-  - **Wi-Fi của trường có thể chặn kết nối giữa các thiết bị** (client isolation). Khi đó bật **hotspot trên điện thoại**, cho laptop kết nối vào hotspot đó, rồi chạy lại `python run.py`.
-- **Quét xong báo "Mã đã đổi"**: mã chỉ sống trong khung 5 giây hiện tại, hãy quét lại mã đang hiện trên máy chiếu. Đồng hồ được lấy từ máy chủ nên giờ điện thoại không ảnh hưởng.
-- **Sau khi đăng nhập không tự điểm danh**: đúng thiết kế, vì mã cũ đã hết hạn. Hãy quét lại mã mới.
-- **Báo "Bạn thao tác quá nhanh"**: mỗi tài khoản tối đa 10 lượt quét/phút, chờ một chút rồi quét lại.
-- **QR không hiện**: máy chiếu cần Internet để tải Bootstrap và `qrcode.js` từ CDN.
-- **Nút "Bật camera để quét" chỉ hiện "Chụp ảnh mã QR"**: trang đang chạy HTTP hoặc chưa cấp quyền camera. Bật `HTTPS=1` (mục 4), mở bằng `https://`, rồi cho phép trình duyệt dùng camera.
-- **macOS báo cổng 5000 đã bị dùng**: tắt "AirPlay Receiver" trong System Settings → General → AirDrop & Handoff.
+## 9. Xử lý sự cố
 
-## 8. Chạy test
+**Không mở được trang trên điện thoại**
+- Kiểm tra đang mở địa chỉ `192.168.x.x`, **không phải** `127.0.0.1`.
+- Mở đúng giao thức: chạy với `HTTPS=1` thì dùng `https://`, không thì dùng `http://`. Sai giao thức thì Safari báo "không thể thiết lập kết nối bảo mật".
+- Điện thoại và laptop phải cùng một mạng Wi-Fi.
+- Tường lửa:
+  - macOS: nếu được hỏi "Cho phép Python nhận kết nối đến?", chọn **Cho phép**.
+  - Windows: cho phép Python qua Windows Defender Firewall, chọn cả mạng Private.
+- **Wi-Fi của trường có thể chặn kết nối giữa các thiết bị.** Khi đó bật hotspot trên điện thoại, cho laptop kết nối vào hotspot, chạy lại `python run.py` và dùng IP mới in ra.
+
+**Cổng 5000 đã bị dùng (`Address already in use`)**
+- macOS: tắt **AirPlay Receiver** trong System Settings → General → AirDrop & Handoff.
+- Hoặc tắt chương trình khác đang dùng cổng 5000 (kể cả một cửa sổ `python run.py` cũ).
+
+**Không bật được camera, trang chỉ hiện nút "Chụp ảnh mã QR"**
+- Trang đang chạy HTTP. Đặt `HTTPS=1` trong `.env`, chạy lại và mở bằng `https://`.
+- Hoặc trình duyệt chưa được cấp quyền camera:
+  - iPhone: Cài đặt → Safari → Camera.
+  - Android: biểu tượng bên trái thanh địa chỉ → Quyền → Camera.
+
+**Các thông báo khi quét**
+- **"Mã đã đổi"**: mã chỉ sống trong khung 5 giây hiện tại, hãy quét lại. Đồng hồ lấy từ máy chủ nên giờ trên điện thoại không ảnh hưởng.
+- **Đăng nhập xong không tự điểm danh**: đúng thiết kế, vì mã cũ đã hết hạn. Hãy quét lại mã mới.
+- **"Bạn thao tác quá nhanh"**: mỗi tài khoản tối đa 10 lượt quét/phút, chờ một chút rồi thử lại.
+
+**QR không hiện trên máy chiếu**
+- Laptop cần Internet để tải Bootstrap, `qrcode.js` và `jsQR` từ CDN.
+
+**Lỗi `Invalid requirement: '#'` khi chạy `pip`**
+- Terminal trên macOS (zsh) không hiểu phần chú thích `# ...` dán cùng dòng lệnh. Chỉ dán phần lệnh.
+
+## 10. Chạy test
 
 ```bash
 pytest
 ```
 
-## 9. Giới hạn của hệ thống
+51 test bao phủ: chỉ chấp nhận mã của khung hiện tại; từ chối mã cũ, mã sai, buổi đã kết thúc, sinh viên không thuộc lớp; quét 2 lần chỉ ghi 1 sự kiện; phân quyền giữa các giảng viên; phát hiện dòng bị sửa hoặc bị xóa; ký lại khi sửa tay sau khi chốt; từ chối form thiếu CSRF token; trang quét QR; chứng chỉ HTTPS.
+
+## 11. Giới hạn của hệ thống
 
 - Một người gọi video cho bạn đang ở nhà, bạn đó quét QR qua màn hình kịp trong 5 giây vẫn điểm danh được.
 - Người biết mật khẩu của bạn khác có thể đăng nhập tài khoản đó trên điện thoại mình và quét hộ.
-- Hệ thống không kiểm tra vị trí, Wi-Fi hay thiết bị; chống gian lận chủ yếu nhờ mã sống ngắn và chỉ quét được khi đang ở trước máy chiếu.
-- Chữ ký số bảo vệ dữ liệu khỏi bị sửa trực tiếp trong CSDL, nhưng nếu kẻ tấn công lấy được cả khóa riêng trong `keys/` thì có thể ký lại. Vì vậy cần bảo vệ thư mục này.
+- Hệ thống không kiểm tra vị trí, Wi-Fi hay thiết bị. Chống gian lận chủ yếu nhờ mã sống ngắn, chỉ quét được khi đang ở trước máy chiếu.
+- Chữ ký số bảo vệ dữ liệu khỏi bị sửa trực tiếp trong CSDL. Nhưng nếu kẻ tấn công lấy được cả khóa riêng trong `keys/` thì có thể ký lại, vì vậy cần bảo vệ thư mục này.
+- Chứng chỉ HTTPS là tự ký, chỉ phù hợp để demo trong mạng nội bộ. Server dùng là server phát triển của Flask, không dùng cho môi trường thật.
