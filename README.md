@@ -46,6 +46,8 @@ python -c "import secrets; print(secrets.token_hex(32))"   # dán kết quả v�
 
 `BASE_URL` để trống thì ứng dụng tự phát hiện IP mạng nội bộ của máy (ví dụ `http://192.168.1.5:5000`). Chỉ cần điền khi tự phát hiện sai, ví dụ máy có nhiều card mạng.
 
+`HTTPS=1` để chạy HTTPS (xem mục 4). Để trống = HTTP.
+
 ## 3. Tạo dữ liệu mẫu
 
 ```bash
@@ -64,6 +66,12 @@ python run.py
 
 Máy chủ lắng nghe ở `0.0.0.0:5000`. Trên laptop mở `http://<IP-laptop>:5000` (IP in ra ở dòng `Running on http://...` khi khởi động).
 
+**Chạy HTTPS (để sinh viên quét QR ngay trong web):** trình duyệt điện thoại chỉ cho bật camera trên trang web khi trang chạy HTTPS. Đặt `HTTPS=1` trong `.env` rồi chạy lại `python run.py`:
+
+- Lần đầu ứng dụng tự sinh chứng chỉ tự ký vào `keys/tls_cert.pem` và `keys/tls_key.pem`, cấp cho IP mạng nội bộ hiện tại. Khi đổi mạng (IP khác) chứng chỉ được sinh lại.
+- Mở `https://<IP-laptop>:5000`. Vì chứng chỉ tự ký, mỗi máy (laptop, từng điện thoại) sẽ hiện cảnh báo bảo mật **một lần**: chọn "Nâng cao" → "Tiếp tục truy cập" (Safari: "Hiển thị chi tiết" → "truy cập trang web này").
+- Mã QR trên máy chiếu tự dùng link `https://...`. Cookie phiên có thêm cờ `Secure`, nên sau khi bật hoặc tắt HTTPS mọi người cần đăng nhập lại.
+
 ## 5. Tài khoản thử
 
 | Vai trò | Tên đăng nhập | Mật khẩu |
@@ -77,7 +85,7 @@ Lớp: `BMUD01` có sv01–sv10, `MMT01` có sv06–sv15, `CSDL01` có sv01–sv
 
 1. Laptop: đăng nhập `gv01` → chọn lớp → bấm **"Tạo buổi điểm danh"** ở buổi 5 → màn hình chiếu QR (nên mở toàn màn hình, F11).
 2. Điện thoại kết nối **cùng Wi-Fi** với laptop, mở `http://<IP-laptop>:5000`, đăng nhập một sinh viên của lớp (ví dụ `sv01` cho BMUD01).
-3. Dùng camera điện thoại quét QR → trang hiện "Điểm danh thành công lúc ...". Trên máy chiếu, số lượng và danh sách cập nhật trong khoảng 1 giây.
+3. Dùng camera điện thoại quét QR → trang hiện "Điểm danh thành công lúc ...". Cách khác: trên trang "Tình trạng điểm danh của tôi" bấm **"Quét mã QR điểm danh"** → **"Bật camera để quét"** để quét ngay trong web, đọc được mã là ghi nhận luôn. Camera trực tiếp cần chạy HTTPS (mục 4); với HTTP, trang chỉ cho chụp ảnh mã QR, dễ bị quá 5 giây. Trên máy chiếu, số lượng và danh sách cập nhật trong khoảng 1 giây.
 4. Thử các trường hợp bị từ chối: quét lại lần nữa, chụp ảnh QR rồi mở link sau hơn 5 giây, đăng nhập sinh viên lớp khác (ví dụ `sv11` cho BMUD01).
 5. Bấm **"Xác nhận & kết thúc"** → sửa tay nếu cần → **"Chốt buổi"** → **"Kiểm tra toàn vẹn"** → "Còn nguyên vẹn".
 6. Demo phát hiện sửa dữ liệu: mở `instance/app.db` bằng DB Browser for SQLite (hoặc `sqlite3`), sửa cột `kind` của một dòng trong `attendance_events`, hoặc xóa một dòng, rồi bấm lại "Kiểm tra toàn vẹn". Hệ thống báo dòng đỏ chỉ đúng sự kiện bị sửa.
@@ -94,6 +102,8 @@ Lớp: `BMUD01` có sv01–sv10, `MMT01` có sv06–sv15, `CSDL01` có sv01–sv
 - **Sau khi đăng nhập không tự điểm danh**: đúng thiết kế, vì mã cũ đã hết hạn. Hãy quét lại mã mới.
 - **Báo "Bạn thao tác quá nhanh"**: mỗi tài khoản tối đa 10 lượt quét/phút, chờ một chút rồi quét lại.
 - **QR không hiện**: máy chiếu cần Internet để tải Bootstrap và `qrcode.js` từ CDN.
+- **Nút "Bật camera để quét" chỉ hiện "Chụp ảnh mã QR"**: trang đang chạy HTTP hoặc chưa cấp quyền camera. Bật `HTTPS=1` (mục 4), mở bằng `https://`, rồi cho phép trình duyệt dùng camera.
+- **macOS báo cổng 5000 đã bị dùng**: tắt "AirPlay Receiver" trong System Settings → General → AirDrop & Handoff.
 
 ## 8. Chạy test
 

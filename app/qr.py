@@ -58,7 +58,8 @@ def base_url():
     configured = current_app.config.get("BASE_URL")
     if configured:
         return configured.rstrip("/")
-    return f"http://{detect_lan_ip()}:{current_app.config.get('PORT', 5000)}"
+    scheme = "https" if current_app.config.get("HTTPS") else "http"
+    return f"{scheme}://{detect_lan_ip()}:{current_app.config.get('PORT', 5000)}"
 
 
 def checkin_url(session_id, code):

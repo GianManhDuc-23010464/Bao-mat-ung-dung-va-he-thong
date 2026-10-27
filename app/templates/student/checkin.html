@@ -7,7 +7,8 @@
   {% if course %}<p class="fs-5 mb-0">{{ course.code }} – {{ course.name }}</p>{% endif %}
 </div>
 {% if current_user.is_student %}
-<div class="text-center mt-4">
+<div class="text-center mt-4 d-grid gap-2 d-sm-block">
+  <a class="btn btn-primary btn-lg" href="{{ url_for('student.scan') }}">Quét lại mã QR</a>
   <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('student.me') }}">Tình trạng điểm danh của tôi</a>
 </div>
 {% endif %}

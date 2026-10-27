@@ -13,6 +13,8 @@ class Config:
     # Để trống = tự phát hiện IP mạng nội bộ
     BASE_URL = os.environ.get("BASE_URL", "").strip()
     PORT = 5000
+    # HTTPS=1: chạy HTTPS bằng chứng chỉ tự ký (cần để bật camera trên trang /scan ở điện thoại)
+    HTTPS = os.environ.get("HTTPS", "").strip().lower() in ("1", "true", "yes")
 
     KEYS_DIR = os.path.join(BASE_DIR, "keys")
 
@@ -21,6 +23,8 @@ class Config:
     SESSION_COOKIE_SAMESITE = "Lax"
     REMEMBER_COOKIE_HTTPONLY = True
     REMEMBER_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = HTTPS
+    REMEMBER_COOKIE_SECURE = HTTPS
     REMEMBER_COOKIE_DURATION = timedelta(days=30)
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 

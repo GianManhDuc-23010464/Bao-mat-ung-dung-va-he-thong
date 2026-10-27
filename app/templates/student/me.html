@@ -2,6 +2,7 @@
 {% from "_state.html" import state_badge %}
 {% block title %}Tình trạng điểm danh của tôi{% endblock %}
 {% block content %}
+<a class="btn btn-primary btn-lg w-100 mb-4" href="{{ url_for('student.scan') }}">Quét mã QR điểm danh</a>
 <h1 class="h4 mb-3">Tình trạng điểm danh của tôi</h1>
 {% for course, rows, absent in tables %}
 <div class="card shadow-sm mb-4">

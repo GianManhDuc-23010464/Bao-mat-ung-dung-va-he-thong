@@ -89,6 +89,13 @@ def checkin():
     return _result(True, f"Điểm danh thành công lúc {fmt_time(ev.created_at)}", course)
 
 
+@bp.route("/scan")
+@student_required
+def scan():
+    # Quét QR ngay trên web; mã đọc được sẽ chuyển sang /checkin như khi dùng camera điện thoại
+    return render_template("student/scan.html")
+
+
 @bp.route("/me")
 @student_required
 def me():
